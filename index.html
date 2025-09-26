@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Study Planner</title>
+  <style>
+    body {
+      font-family: Cambria, Elephant;
+      margin: 0;
+      padding: 20px;
+      background: url('https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D');
+      background-size: cover;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    h1 {
+      text-align: center;
+      color: #050505;
+    }
+
+    .planner {
+      max-width: 800px;
+      margin: 0 auto;
+      background: rgba(36, 3, 1, 0.429);
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(24, 23, 23, 0.1);
+    }
+
+    form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    input, button {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: 1px solid;
+    }
+
+    input[type="text"], input[type="date"] {
+      flex: 1;
+    }
+
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #45a049;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .completed {
+      text-decoration: line-through;
+      color: rgb(45, 1, 1);
+    }
+
+    .timeline {
+      margin-top: 30px;
+    }
+
+    .timeline-bar {
+      display: flex;
+      overflow-x: auto;
+      background: #eee;
+      padding: 10px;
+      border-radius: 5px;
+    }
+
+    .timeline-item {
+      min-width: 150px;
+      margin-right: 10px;
+      background: #2196F3;
+      color: white;
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .remove-btn {
+      background: red;
+      color: white;
+      border: none;
+      padding: 5px 8px;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+
+    #reminder {
+      color: rgb(29, 7, 113);
+      font-weight: bold;
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div class="planner">
+    <h1>Study Planner</h1>
+
+    <div id="reminder"></div>
+
+    <form id="taskForm">
+      <input type="text" id="taskName" placeholder="Task name" required />
+      <input type="text" id="taskSubject" placeholder="Subject" required />
+      <input type="date" id="taskDue" required />
+      <button type="submit">Add Task</button>
+    </form>
+
+    <ul id="taskList"></ul>
+
+    <div class="timeline">
+      <h3>Upcoming Tasks Timeline</h3>
+      <div class="timeline-bar" id="timelineBar"></div>
+    </div>
+  </div>
+
+  <script>
+    const taskForm = document.getElementById('taskForm');
+    const taskList = document.getElementById('taskList');
+    const timelineBar = document.getElementById('timelineBar');
+    const reminderDiv = document.getElementById('reminder');
+
+    let tasks = JSON.parse(localStorage.getItem('studyTasks')) || [];
+
+    function saveTasks() {
+      localStorage.setItem('studyTasks', JSON.stringify(tasks));
+    }
+
+    function renderTasks() {
+      taskList.innerHTML = '';
+      timelineBar.innerHTML = '';
+
+      tasks.sort((a, b) => new Date(a.due) - new Date(b.due));
+
+      tasks.forEach((task, index) => {
+        const li = document.createElement('li');
+        li.className = task.completed ? 'completed' : '';
+
+        li.innerHTML = `
+          <div>
+            <strong>${task.name}</strong> (${task.subject}) - Due: ${task.due}
+          </div>
+          <div>
+            <input type="checkbox" ${task.completed ? 'checked' : ''} onchange="toggleComplete(${index})">
+            <button class="remove-btn" onclick="removeTask(${index})">X</button>
+          </div>
+        `;
+
+        taskList.appendChild(li);
+
+        const timelineItem = document.createElement('div');
+        timelineItem.className = 'timeline-item';
+        timelineItem.textContent = `${task.name}\n(${task.due})`;
+        timelineBar.appendChild(timelineItem);
+      });
+    }
+
+    function checkReminders() {
+      const now = new Date();
+      let reminderMessages = [];
+
+      tasks.forEach(task => {
+        const dueDate = new Date(task.due);
+        const timeDiff = dueDate.getTime() - now.getTime();
+        const hoursLeft = timeDiff / (1000 * 60 * 60);
+
+        if (!task.completed && hoursLeft <= 24 && hoursLeft > 0) {
+          reminderMessages.push(` Reminder: "${task.name}" (${task.subject}) is due on ${task.due}.`);
+        }
+      });
+
+      if (reminderMessages.length > 0) {
+        reminderDiv.innerHTML = reminderMessages.join('<br>');
+      } else {
+        reminderDiv.innerHTML = '';
+      }
+    }
+
+    function addTask(name, subject, due) {
+      tasks.push({ name, subject, due, completed: false });
+      saveTasks();
+      renderTasks();
+      checkReminders();
+    }
+
+    function removeTask(index) {
+      tasks.splice(index, 1);
+      saveTasks();
+      renderTasks();
+      checkReminders();
+    }
+
+    function toggleComplete(index) {
+      tasks[index].completed = !tasks[index].completed;
+      saveTasks();
+      renderTasks();
+      checkReminders();
+    }
+
+    taskForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = document.getElementById('taskName').value.trim();
+      const subject = document.getElementById('taskSubject').value.trim();
+      const due = document.getElementById('taskDue').value;
+
+      if (name && subject && due) {
+        addTask(name, subject, due);
+        taskForm.reset();
+      }
+    });
+
+    window.removeTask = removeTask;
+    window.toggleComplete = toggleComplete;
+
+    renderTasks();
+    checkReminders();
+  </script>
+</body>
+</html>
