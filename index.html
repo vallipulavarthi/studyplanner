@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Student Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=1200&auto=format&fit=crop') no-repeat center/cover;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.4);
+    }
+
+    .card {
+      position: relative;
+      z-index: 2;
+      width: 450px;   /* wider box */
+      padding: 20px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(15px);
+      color: white;
+      text-align: center;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.3);
+    }
+
+    /* Header Section */
+    .header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .header img {
+      width: 60px;
+      margin-bottom: 8px;
+    }
+    .header h1 {
+      font-size: 22px;
+      font-weight: 600;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    input, .toggle-container {
+      width: 100%;
+      padding: 8px;
+      margin: 6px 0;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 14px;
+    }
+    input { background: rgba(255,255,255,0.9); color: #333; }
+    input:focus { outline: none; box-shadow: 0 0 5px #4facfe; }
+
+    .btn {
+      background: linear-gradient(135deg, #4facfe, #00f2fe);
+      border: none;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      margin: 5px;
+      transition: all 0.3s ease;
+    }
+    .btn:hover { transform: scale(1.05); box-shadow: 0 0 8px rgba(0,0,0,0.3); }
+
+    .remove-btn {
+      background: #e74c3c;
+      border: none;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 12px;
+      margin-left: 8px;
+      transition: all 0.3s ease;
+    }
+    .remove-btn:hover { background: #c0392b; }
+
+    ul { list-style: none; padding: 0; margin: 12px 0; text-align: left; font-size: 14px; }
+    li {
+      background: rgba(255,255,255,0.2);
+      margin: 4px 0;
+      padding: 8px;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Toggle Switch */
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 4px 8px;
+      font-size: 13px;
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 20px;
+    }
+    .switch input { display: none; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #ccc;
+      transition: .4s;
+      border-radius: 20px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 14px; width: 14px;
+      left: 3px; bottom: 3px;
+      background: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    input:checked + .slider { background: #4facfe; }
+    input:checked + .slider:before { transform: translateX(20px); }
+
+    .timer { font-size: 18px; margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <div class="overlay"></div>
+  <div class="card">
+    <!-- Header -->
+    <div class="header">
+      <img src="https://img.icons8.com/fluency/96/open-book.png" alt="study icon">
+      <h1>Student Dashboard 
+        <img src="https://img.icons8.com/color/24/books.png" alt="books icon">
+      </h1>
+    </div>
+
+    <!-- Task Form -->
+    <h3>Add Task</h3>
+    <input type="text" id="taskName" placeholder="Task / Assignment Name">
+    <input type="text" id="taskSubject" placeholder="Subject">
+    <input type="date" id="taskDue">
+    <div class="toggle-container">
+      <span>Notify 1 day before</span>
+      <label class="switch">
+        <input type="checkbox" id="notifyToggle">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <button class="btn" onclick="addTask()">Add Task</button>
+
+    <ul id="taskList"></ul>
+
+    <!-- Pomodoro -->
+    <h3>Pomodoro Timer</h3>
+    <p class="timer" id="timerDisplay">25:00</p>
+    <button class="btn" id="startStopBtn" onclick="toggleTimer()">Start</button>
+    <button class="btn" id="pauseBtn" onclick="pauseTimer()" style="display:none;">Pause</button>
+    <button class="btn" id="restartBtn" onclick="restartTimer()" style="display:none;">Restart</button>
+  </div>
+
+  <script>
+    // ===== Task Manager =====
+    let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+
+    function saveTasks() { localStorage.setItem("tasks", JSON.stringify(tasks)); }
+
+    function renderTasks() {
+      const list = document.getElementById("taskList");
+      list.innerHTML = "";
+      tasks.forEach((t,i)=>{
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <div>
+            <strong>${t.name}</strong> (${t.subject}) - Due: ${t.due}
+            ${t.notify ? "<br><em>🔔 Reminder set for 1 day before</em>" : ""}
+          </div>
+          <button class="remove-btn" onclick="removeTask(${i})">Remove</button>
+        `;
+        list.appendChild(li);
+      });
+    }
+
+    function addTask() {
+      const name = document.getElementById("taskName").value.trim();
+      const subject = document.getElementById("taskSubject").value.trim();
+      const due = document.getElementById("taskDue").value;
+      const notify = document.getElementById("notifyToggle").checked;
+
+      if(name && subject && due){
+        tasks.push({name, subject, due, notify});
+        saveTasks(); renderTasks();
+        document.getElementById("taskName").value="";
+        document.getElementById("taskSubject").value="";
+        document.getElementById("taskDue").value="";
+        document.getElementById("notifyToggle").checked=false;
+      } else {
+        alert("Please fill all fields.");
+      }
+    }
+
+    function removeTask(index) {
+      tasks.splice(index,1);
+      saveTasks();
+      renderTasks();
+    }
+
+    renderTasks();
+
+    // ===== Pomodoro Timer =====
+    let timer; let running=false; let paused=false;
+    let minutes=25, seconds=0;
+
+    function updateDisplay(){
+      document.getElementById("timerDisplay").textContent = 
+        `${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+    }
+
+    function toggleTimer() {
+      const startStopBtn = document.getElementById("startStopBtn");
+      const pauseBtn = document.getElementById("pauseBtn");
+      const restartBtn = document.getElementById("restartBtn");
+
+      if(!running){
+        running = true; paused = false;
+        startStopBtn.textContent="Stop";
+        pauseBtn.style.display="inline-block";
+        restartBtn.style.display="inline-block";
+        timer = setInterval(()=>{
+          if(!paused){
+            if(seconds===0){
+              if(minutes===0){
+                clearInterval(timer);
+                running=false;
+                startStopBtn.textContent="Start";
+                pauseBtn.style.display="none";
+                restartBtn.style.display="none";
+                alert("⏰ Time’s up! Take a 5-minute break.");
+                minutes=25; seconds=0; updateDisplay();
+                return;
+              }
+              minutes--; seconds=59;
+            } else { seconds--; }
+            updateDisplay();
+          }
+        },1000);
+      } else {
+        clearInterval(timer);
+        running=false;
+        startStopBtn.textContent="Start";
+        pauseBtn.style.display="none";
+        restartBtn.style.display="none";
+        minutes=25; seconds=0; updateDisplay();
+      }
+    }
+
+    function pauseTimer(){
+      paused=!paused;
+      document.getElementById("pauseBtn").textContent = paused ? "Resume" : "Pause";
+    }
+
+    function restartTimer(){
+      minutes=25; seconds=0;
+      updateDisplay();
+    }
+
+    updateDisplay();
+  </script>
+</body>
+</html>
